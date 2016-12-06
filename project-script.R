@@ -15,6 +15,7 @@ library("magrittr")
 library("irlba")
 library("foreach")
 library("doParallel")
+library("ggplot2")
 
 #Read data; consider using the `readr` package to make this faster
 gdat <- data.matrix(fread("genotype.txt"))
@@ -55,26 +56,46 @@ pdat2 %>% group_by(Y, gender, ancestry) %>%
 #############################
 
 # Consider taking a random subset of 'r' variants to speed up PCA
+set.seed(1262)
 r <- 1000
-gRand <- gdat[,sample(ncol(gdat), r) ]
+gRand <- gdat2[,sample(ncol(gdat2), r) ]
 G <- as.matrix(gRand)
+
+G <- as.matrix(gdat2)
 
 # Replace missing data for PC to work
 # need to fix r or gRand
-for (j in 1:r) {
+for (j in 1:ncol(G)) {
     temp <- G[, j]
     # can use mean or median
     G[, j][is.na(temp)] <- mean(temp, na.rm = T)
+    G[, j] <- (G[, j] - mean(G[, j])) / sd(G[, j])
 }
 
-# recommend to center and scale the data first
-g_centered <- scale(gdat)
-
 # Calculate principal components using stats package
-start_time <- Sys.time()
-svd_res <- irlba(g_centered, nv = 10)
-elapsed <- Sys.time() - start_time
+# recommend to center and scale the data first
 # Multiple functions that allow us to do this in R
+
+N_PCS <- 10
+#col_means <- colMeans(G)
+#col_sds <- apply(G, 2, sd)
+start_time <- Sys.time()
+#svd_res <- irlba(G, nv = N_PCS, center = col_means,
+#                 scale = col_sds)
+svd_res <- irlba(G, nv = N_PCS)
+elapsed <- Sys.time() - start_time
+print(elapsed)
+
+g_pca <- G %*% svd_res$v
+colnames(g_pca) <- paste0("PC", 1:N_PCS)
+g_pca_df <- as.data.frame(g_pca)
+
+ancestry_gender <- interaction(pdat2$ancestry, pdat2$gender)
+
+ggplot(data = g_pca_df, aes(x = PC1, y = PC2, color = ancestry_gender)) + geom_point()
+
+plot(svd_res$d, type = "b")
+
 
 
 #####################
