@@ -1,10 +1,7 @@
 #####################################
 # BST 227 Final Project             #
-# 2016 Help Guide                   #
-# Author: caleblareau@g.harvard.edu #
+# Team Morton                       #
 #####################################
-
-# <andyshi@g.harvard.edu>
 
 library(stats)
 library(ggplot2)
@@ -56,11 +53,6 @@ pdat2 %>% group_by(Y, gender, ancestry) %>%
 #############################
 
 # Consider taking a random subset of 'r' variants to speed up PCA
-set.seed(1262)
-r <- 1000
-gRand <- gdat2[,sample(ncol(gdat2), r) ]
-G <- as.matrix(gRand)
-
 G <- as.matrix(gdat2)
 
 # Replace missing data for PC to work
@@ -92,7 +84,11 @@ g_pca_df <- as.data.frame(g_pca)
 
 ancestry_gender <- interaction(pdat2$ancestry, pdat2$gender)
 
-ggplot(data = g_pca_df, aes(x = PC1, y = PC2, color = ancestry_gender)) + geom_point()
+ggplot(data = g_pca_df, aes(x = PC1, y = PC2, color = pdat2$ancestry)) +
+    geom_point()
+
+ggplot(data = g_pca_df, aes(x = PC2, y = PC3, color = pdat2$ancestry)) +
+    geom_point()
 
 plot(svd_res$d, type = "b")
 
@@ -143,7 +139,7 @@ df.noadj <- data.frame("chr"=legend[output.noadj[,"SNP_num"],"chr"],
 #         print(paste("Progress:", names(which(j==floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))))), quote=F)
 #     }
 #     noadj.mod <- summary(glm(pdat$Y~gdat[,j]+pdat$gender,family=binomial()))$coeff
-# 
+#
 # }
 
 
