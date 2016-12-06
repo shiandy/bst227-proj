@@ -62,7 +62,7 @@ G <- as.matrix(gRand)
 # Replace missing data for PC to work
 # need to fix r or gRand
 for (j in 1:r) {
-    temp <- gRand[, j]
+    temp <- G[, j]
     # can use mean or median
     G[, j][is.na(temp)] <- mean(temp, na.rm = T)
 }
@@ -71,7 +71,9 @@ for (j in 1:r) {
 g_centered <- scale(gdat)
 
 # Calculate principal components using stats package
+start_time <- Sys.time()
 svd_res <- irlba(g_centered, nv = 10)
+elapsed <- Sys.time() - start_time
 # Multiple functions that allow us to do this in R
 
 
