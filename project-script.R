@@ -47,6 +47,29 @@ pdat2 %>% group_by(Y, gender, ancestry) %>%
 #feCases <-nrow(subset(pdat,gender=="F" & Y==1 & ancestry == "European"))
 
 # further QC: Hardy Weinberg Equilibrium
+# x: a vector of genotypes (0, 1, or 2)
+hwe_test <- function(x) {
+    x_notna <- x[!is.na(x)]
+    stopifnot(is.integer(x_notna))
+    n <- length(x_notna)
+    pbar <- sum(x_notna) / (2 * n)
+
+    obs <- vapply(0:2, function(y) { sum(x_notna == y)}, as.integer(1))
+    expected <- c(n * (1 - pbar)^2, 2 * n * pbar * (1 - pbar),
+                  n * (pbar^2))
+    test_stat <- sum( ((obs - expected)^2) / expected)
+    pval <- pchisq(test_stat, df = 1, lower.tail = FALSE)
+    return(pval)
+}
+
+hwe_res <- apply(gdat2, 2, hwe_test)
+
+# hardy-weinberg by ethnicity
+hwe_african <- apply(gdat2[pdat2$ancestry == "African", ], 2, hwe_test)
+hwe_euro <- apply(gdat2[pdat2$ancestry == "European", ], 2, hwe_test)
+
+hist(hwe_african)
+hist(hwe_euro)
 
 #############################
 #PrincipalComponent Analysis#
