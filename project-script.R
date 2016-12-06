@@ -43,6 +43,7 @@ nSNPsRemaining <- dim(gdat2)[2]
 pdat2 %>% group_by(Y, gender, ancestry) %>%
     summarize(total = n(), percentage = n() / nPeopleRemaining)
 
+# do something
 #feCases <-nrow(subset(pdat,gender=="F" & Y==1 & ancestry == "European"))
 
 # further QC: Hardy Weinberg Equilibrium
