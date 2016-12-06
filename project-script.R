@@ -4,7 +4,7 @@
 # Author: caleblareau@g.harvard.edu #
 #####################################
 
-# THIS VERSION EDITED BY ANDY SHI <andyshi@g.harvard.edu>
+# <andyshi@g.harvard.edu>
 
 library(stats)
 library(ggplot2)
