@@ -85,7 +85,7 @@ elapsed <- Sys.time() - start_time
 cl <- makeCluster(4)
 registerDoParallel(cl)
 
-output <- foreach(j = 1:4, .combine = rbind) %dopar% {
+output.gender <- foreach(j = 1:nSNPsRemaining, .combine = rbind) %dopar% {
     mod <- glm(pdat2$Y ~ gdat2[, j] + pdat2$gender,
                 family = binomial())
     pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
@@ -94,19 +94,41 @@ output <- foreach(j = 1:4, .combine = rbind) %dopar% {
     names(ret) <- c("SNP_num", "beta", "pval")
     ret
 }
+stopCluster(cl)
+df.gender <- data.frame("chr"=legend[output.gender[,"SNP_num"],"chr"],
+                        "bp"=legend[output.gender[,"SNP_num"],"position"],
+                        "p"=output.gender[,"pval"])
 
-for (j in 1:nSNPsRemaining) {
-    if (j %in% floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))) {
-        print(paste("Progress:", names(which(j==floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))))), quote=F)
-    }
-    noadj.mod <- summary(glm(pdat$Y~gdat[,j]+pdat$gender,family=binomial()))$coeff
 
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+output.noadj <- foreach(j = 1:nSNPsRemaining, .combine = rbind) %dopar% {
+  mod <- glm(pdat2$Y ~ gdat2[, j],
+             family = binomial())
+  pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
+  beta <- coef(mod)["gdat2[, j]"]
+  ret <- c(j, beta, pval)
+  names(ret) <- c("SNP_num", "beta", "pval")
+  ret
 }
+stopCluster(cl)
+df.noadj <- data.frame("chr"=legend[output.noadj[,"SNP_num"],"chr"],
+                        "bp"=legend[output.noadj[,"SNP_num"],"position"],
+                        "p"=output.noadj[,"pval"])
+
+# for (j in 1:nSNPsRemaining) {
+#     if (j %in% floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))) {
+#         print(paste("Progress:", names(which(j==floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))))), quote=F)
+#     }
+#     noadj.mod <- summary(glm(pdat$Y~gdat[,j]+pdat$gender,family=binomial()))$coeff
+# 
+# }
 
 
 #######
 #Plots#
 #######
 
-manhattan(result,chr="chr",bp="position",p="noadj.p", main="No adjustment", suggestiveline = -log10(.05/nSNPsRemaining))
-qq(result$noadj.p, main="No adjustment")
+manhattan(df.gender,chr="chr",bp="position",p="p", main="Adjusted Covariates: Gender", suggestiveline = -log10(.05/nSNPsRemaining))
+qq(df.gender$p, main="Adjusted Covariates: Gender")
