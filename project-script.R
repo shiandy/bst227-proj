@@ -101,6 +101,19 @@ plot(svd_res$d, type = "b")
 #Logistic Regression#
 #####################
 
+## pdat3 takes pdat2 and adds the PC values ##
+pdat3 = pdat2
+pdat3$PC1 = g_pca_df$PC1
+pdat3$PC2 = g_pca_df$PC2
+pdat3$PC3 = g_pca_df$PC3
+pdat3$PC4 = g_pca_df$PC4
+pdat3$PC5 = g_pca_df$PC5
+pdat3$PC6 = g_pca_df$PC6
+pdat3$PC7 = g_pca_df$PC7
+pdat3$PC8 = g_pca_df$PC8
+pdat3$PC9 = g_pca_df$PC9
+pdat3$PC10 = g_pca_df$PC10
+
 
 cl <- makeCluster(4)
 registerDoParallel(cl)
@@ -192,6 +205,25 @@ df.anc.factor <- data.frame("chr"=legend[output.anc.factor[,"SNP_num"],"chr"],
 cl <- makeCluster(4)
 registerDoParallel(cl)
 
+
+## PC1-3 ##
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+output.pc13 <- foreach(j = 1:nSNPsRemaining, .combine = rbind) %dopar% {
+  mod <- glm(pdat3$Y ~ gdat2[, j] + pdat3$PC1 + pdat3$PC2 + pdat3$PC3,
+             family = binomial())
+  pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
+  beta <- coef(mod)["gdat2[, j]"]
+  ret <- c(j, beta, pval)
+  names(ret) <- c("SNP_num", "beta", "pval")
+  ret
+}
+stopCluster(cl)
+df.pc13 <- data.frame("chr"=legend[output.pc13[,"SNP_num"],"chr"],
+                        "bp"=legend[output.pc13[,"SNP_num"],"position"],
+                        "p"=output.pc13[,"pval"])
+
 # for (j in 1:nSNPsRemaining) {
 #     if (j %in% floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))) {
 #         print(paste("Progress:", names(which(j==floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))))), quote=F)
@@ -211,6 +243,8 @@ SigPos.anc = df.anc$position[df.anc$p<alpha]
 SigSNPs.anc = subset(legend,position %in% SigPos.anc)
 SigPos.genanc = df.genanc$position[df.genanc$p<alpha]
 SigSNPs.genanc = subset(legend,position %in% SigPos.genanc)
+SigPos.pc13 = df.pc13$position[df.pc13$p<alpha]
+SigSNPs.pc13 = subset(legend,position %in% SigPos.pc13)
 
 
 #######
@@ -236,3 +270,8 @@ manhattan(df.genanc,chr="chr",bp="position",p="p",
           main="Adjusted Covariates: Gender, Ancestry",
           suggestiveline = -log10(.05/nSNPsRemaining))
 qq(df.genanc$p, main="Adjusted Covariates: Gender, Ancestry")
+
+manhattan(df.pc13,chr="chr",bp="position",p="p",
+          main="PCs 1-3",
+          suggestiveline = -log10(.05/nSNPsRemaining))
+qq(df.pc13$p, main="PCs 1-3")
