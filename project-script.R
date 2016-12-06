@@ -13,6 +13,8 @@ library("data.table")
 library("dplyr")
 library("magrittr")
 library("irlba")
+library("foreach")
+library("doParallel")
 
 #Read data; consider using the `readr` package to make this faster
 gdat <- data.matrix(fread("genotype.txt"))
@@ -66,14 +68,30 @@ for (j in 1:r) {
 }
 
 # recommend to center and scale the data first
+g_centered <- scale(gdat)
 
 # Calculate principal components using stats package
+svd_res <- irlba(g_centered, nv = 10)
 # Multiple functions that allow us to do this in R
 
 
 #####################
 #Logistic Regression#
 #####################
+
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+output <- foreach(j = 1:4, .combine = rbind) %dopar% {
+    mod <- glm(pdat2$Y ~ gdat2[, j] + pdat2$gender,
+                family = binomial())
+    pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
+    beta <- coef(mod)["gdat2[, j]"]
+    ret <- c(j, beta, pval)
+    names(ret) <- c("SNP_num", "beta", "pval")
+    ret
+}
 
 for (j in 1:nSNPsRemaining) {
     if (j %in% floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))) {
