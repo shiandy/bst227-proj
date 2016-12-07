@@ -320,9 +320,15 @@ SigSNPs.anc = subset(legend,position %in% SigPos.anc)
 PVals.anc = data.frame(pos=df.anc$position[df.anc$p<alpha],
                        pvals=df.anc$p[df.anc$p<alpha])
 PVals.anc$pval7 = PVals.anc$pvals * 10^(7)
+PVals.anc$beta = output.anc[output.anc[,"pval"]<alpha,"beta"]
 
 SigPos.genanc = df.genanc$position[df.genanc$p<alpha]
 SigSNPs.genanc = subset(legend,position %in% SigPos.genanc)
+PVals.genanc = data.frame(pos=df.genanc$position[df.genanc$p<alpha],
+                       pvals=df.genanc$p[df.genanc$p<alpha])
+PVals.genanc$pval7 = PVals.genanc$pvals * 10^(7)
+PVals.genanc$beta = output.genanc[output.genanc[,"pval"]<alpha,"beta"]
+
 SigPos.pc13 = df.pc13$position[df.pc13$p<alpha]
 SigSNPs.pc13 = subset(legend,position %in% SigPos.pc13)
 SigPos.pc15 = df.pc15$position[df.pc15$p<alpha]
