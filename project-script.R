@@ -66,13 +66,17 @@ hwe_test <- function(x) {
 }
 
 hwe_res <- apply(gdat2, 2, hwe_test)
+hist(hwe_res, main = "Histogram of p-values",
+     xlab = "pvalue for test for HWE")
 
 # hardy-weinberg by ethnicity
 hwe_african <- apply(gdat2[pdat2$ancestry == "African", ], 2, hwe_test)
 hwe_euro <- apply(gdat2[pdat2$ancestry == "European", ], 2, hwe_test)
 
-hist(hwe_african)
-hist(hwe_euro)
+hist(hwe_african, main = "Histogram of p-values for Africans",
+     xlab = "pvalue for test for HWE")
+hist(hwe_euro, main = "Histogram of p-values for Europeans",
+     xlab = "pvalue for test for HWE")
 
 #############################
 #PrincipalComponent Analysis#
@@ -111,13 +115,15 @@ g_pca_df <- as.data.frame(g_pca)
 ancestry_gender <- interaction(pdat2$ancestry, pdat2$gender)
 
 ggplot(data = g_pca_df, aes(x = PC1, y = PC2, color = pdat2$ancestry)) +
-    geom_point()
+    geom_point() + labs(color = "Ancestry") +
+    ggtitle("Principal Components Plot, PC1 and PC2")
 
 ggplot(data = g_pca_df, aes(x = PC2, y = PC3, color = pdat2$ancestry)) +
-    geom_point()
+    geom_point() + labs(color = "Ancestry") +
+    ggtitle("Principal Components Plot, PC2 and PC3")
 
-plot(svd_res$d, type = "b")
-
+plot(svd_res$d, type = "b", main = "PCA Variance Explained",
+     xlab = "Component", ylab = "Singular Value")
 
 
 #####################
