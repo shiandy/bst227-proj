@@ -188,8 +188,9 @@ df.genanc <- data.frame("chr"=legend[output.genanc[,"SNP_num"],"chr"],
 cl <- makeCluster(4)
 registerDoParallel(cl)
 
-output.anc.factor <- foreach(j = 1:4, .combine = rbind) %dopar% {
-  mod <- glm(pdat2$Y ~ as.factor(gdat2[, j]) + pdat2$ancestry,
+output.anc.fac <- foreach(j = 1:nSNPsRemaining, .combine = rbind) %dopar% {
+  use <- ifelse(is.na(gdat2[,j]),FALSE,TRUE)
+  mod <- glm(pdat2$Y[use] ~ as.factor(gdat2[use, j]) + pdat2$ancestry[use],
              family = binomial())
   pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
   beta <- coef(mod)["gdat2[, j]"]
@@ -198,12 +199,9 @@ output.anc.factor <- foreach(j = 1:4, .combine = rbind) %dopar% {
   ret
 }
 stopCluster(cl)
-df.anc.factor <- data.frame("chr"=legend[output.anc.factor[,"SNP_num"],"chr"],
-                     "bp"=legend[output.anc.factor[,"SNP_num"],"position"],
-                     "p"=output.anc.factor[,"pval"])
-
-cl <- makeCluster(4)
-registerDoParallel(cl)
+df.anc.fac <- data.frame("chr"=legend[output.anc.fac[,"SNP_num"],"chr"],
+                     "bp"=legend[output.anc.fac[,"SNP_num"],"position"],
+                     "p"=output.anc.fac[,"pval"])
 
 
 ## PC1-3 ##
@@ -224,6 +222,60 @@ df.pc13 <- data.frame("chr"=legend[output.pc13[,"SNP_num"],"chr"],
                         "bp"=legend[output.pc13[,"SNP_num"],"position"],
                         "p"=output.pc13[,"pval"])
 
+## PC1-5 ##
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+output.pc15 <- foreach(j = 1:nSNPsRemaining, .combine = rbind) %dopar% {
+  mod <- glm(pdat3$Y ~ gdat2[, j] + pdat3$PC1 + pdat3$PC2 + pdat3$PC3 + pdat3$PC4 + pdat3$PC5,
+             family = binomial())
+  pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
+  beta <- coef(mod)["gdat2[, j]"]
+  ret <- c(j, beta, pval)
+  names(ret) <- c("SNP_num", "beta", "pval")
+  ret
+}
+stopCluster(cl)
+df.pc15 <- data.frame("chr"=legend[output.pc15[,"SNP_num"],"chr"],
+                      "bp"=legend[output.pc15[,"SNP_num"],"position"],
+                      "p"=output.pc15[,"pval"])
+
+## Gender+PC1-3 ##
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+output.genpc13 <- foreach(j = 1:nSNPsRemaining, .combine = rbind) %dopar% {
+  mod <- glm(pdat3$Y ~ gdat2[, j] + pdat3$gender + pdat3$PC1 + pdat3$PC2 + pdat3$PC3,
+             family = binomial())
+  pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
+  beta <- coef(mod)["gdat2[, j]"]
+  ret <- c(j, beta, pval)
+  names(ret) <- c("SNP_num", "beta", "pval")
+  ret
+}
+stopCluster(cl)
+df.genpc13 <- data.frame("chr"=legend[output.genpc13[,"SNP_num"],"chr"],
+                      "bp"=legend[output.genpc13[,"SNP_num"],"position"],
+                      "p"=output.genpc13[,"pval"])
+
+## Gender + PC1-5 ##
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+output.genpc15 <- foreach(j = 1:nSNPsRemaining, .combine = rbind) %dopar% {
+  mod <- glm(pdat3$Y ~ gdat2[, j] + pdat3$gender + pdat3$PC1 + pdat3$PC2 + pdat3$PC3 + pdat3$PC4 + pdat3$PC5,
+             family = binomial())
+  pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
+  beta <- coef(mod)["gdat2[, j]"]
+  ret <- c(j, beta, pval)
+  names(ret) <- c("SNP_num", "beta", "pval")
+  ret
+}
+stopCluster(cl)
+df.genpc15 <- data.frame("chr"=legend[output.genpc15[,"SNP_num"],"chr"],
+                      "bp"=legend[output.genpc15[,"SNP_num"],"position"],
+                      "p"=output.genpc15[,"pval"])
+
 # for (j in 1:nSNPsRemaining) {
 #     if (j %in% floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))) {
 #         print(paste("Progress:", names(which(j==floor(quantile(seq(nSNPsRemaining),seq(0,1,0.1)))))), quote=F)
@@ -239,39 +291,118 @@ df.pc13 <- data.frame("chr"=legend[output.pc13[,"SNP_num"],"chr"],
 alpha = 0.05/nSNPsRemaining
 SigPos.noadj = df.noadj$position[df.noadj$p<alpha]
 SigPos.gender = df.gender$position[df.gender$p<alpha]
+
 SigPos.anc = df.anc$position[df.anc$p<alpha]
 SigSNPs.anc = subset(legend,position %in% SigPos.anc)
+PVals.anc = data.frame(pos=df.anc$position[df.anc$p<alpha],
+                       pvals=df.anc$p[df.anc$p<alpha])
+PVals.anc$pval7 = PVals.anc$pvals * 10^(7)
+
 SigPos.genanc = df.genanc$position[df.genanc$p<alpha]
 SigSNPs.genanc = subset(legend,position %in% SigPos.genanc)
 SigPos.pc13 = df.pc13$position[df.pc13$p<alpha]
 SigSNPs.pc13 = subset(legend,position %in% SigPos.pc13)
+SigPos.pc15 = df.pc15$position[df.pc15$p<alpha]
+SigSNPs.pc15 = subset(legend,position %in% SigPos.pc15)
+SigPos.genpc13 = df.genpc13$position[df.genpc13$p<alpha]
+SigSNPs.genpc13 = subset(legend,position %in% SigPos.genpc13)
+SigPos.genpc15 = df.genpc15$position[df.genpc15$p<alpha]
+SigSNPs.genpc15 = subset(legend,position %in% SigPos.genpc15)
 
+SigPos.anc.fac = df.anc.fac$position[df.anc.fac$p<alpha]
+SigSNPs.anc.fac = subset(legend,position %in% SigPos.anc.fac)
 
 #######
 #Plots#
 #######
 
+
+#### Manhattan Plots ####
+
+## Main Model ##
+manhattan(df.anc,chr="chr",bp="position",p="p",
+          main="Adjusted for Ancestry",
+          suggestiveline = -log10(.05/nSNPsRemaining))
+dev.copy(png,'../Figures/Manh-Anc.png')
+dev.off()
+
+## Under Adjusted Models ##
 manhattan(df.noadj,chr="chr",bp="position",p="p",
           main="Unadjusted",
           suggestiveline = -log10(.05/nSNPsRemaining))
-qq(df.noadj$p, main="Unadjusted")
-
+dev.copy(png,'../Figures/Manh-NoAdj.png')
+dev.off()
 manhattan(df.gender,chr="chr",bp="position",p="p",
-          main="Adjusted Covariates: Gender",
+          main="Adjusted for Gender",
           suggestiveline = -log10(.05/nSNPsRemaining))
-qq(df.gender$p, main="Adjusted Covariates: Gender")
+dev.copy(png,'../Figures/Manh-Gen.png')
+dev.off()
 
-manhattan(df.anc,chr="chr",bp="position",p="p",
-          main="Adjusted Covariates: Ancestry",
-          suggestiveline = -log10(.05/nSNPsRemaining))
-qq(df.anc$p, main="Adjusted Covariates: Ancestry")
-
+## Over Adjusted Models ##
 manhattan(df.genanc,chr="chr",bp="position",p="p",
-          main="Adjusted Covariates: Gender, Ancestry",
+          main="Adjusted for Gender and Ancestry",
           suggestiveline = -log10(.05/nSNPsRemaining))
-qq(df.genanc$p, main="Adjusted Covariates: Gender, Ancestry")
-
+dev.copy(png,'../Figures/Manh-GenAnc.png')
+dev.off()
 manhattan(df.pc13,chr="chr",bp="position",p="p",
-          main="PCs 1-3",
+          main="Adjusted for PCs 1-3",
           suggestiveline = -log10(.05/nSNPsRemaining))
-qq(df.pc13$p, main="PCs 1-3")
+dev.copy(png,'../Figures/Manh-PC13.png')
+dev.off()
+manhattan(df.pc15,chr="chr",bp="position",p="p",
+          main="Adjusted for PCs 1-5",
+          suggestiveline = -log10(.05/nSNPsRemaining))
+dev.copy(png,'../Figures/Manh-PC15.png')
+dev.off()
+manhattan(df.genpc13,chr="chr",bp="position",p="p",
+          main="Adjusted for Gender and PCs 1-3",
+          suggestiveline = -log10(.05/nSNPsRemaining))
+dev.copy(png,'../Figures/Manh-GenPC13.png')
+dev.off()
+manhattan(df.genpc15,chr="chr",bp="position",p="p",
+          main="Adjusted for Gender and PCs 1-5",
+          suggestiveline = -log10(.05/nSNPsRemaining))
+dev.copy(png,'../Figures/Manh-GenPC15.png')
+dev.off()
+manhattan(df.anc.fac,chr="chr",bp="position",p="p",
+          main="Adjusted for Ancestry, No Assumed Inheritance Mode",
+          suggestiveline = -log10(.05/nSNPsRemaining))
+dev.copy(png,'../Figures/Manh-Anc-Fac.png')
+dev.off()
+
+
+#### Q-Q Plots ####
+
+## Main Model ##
+qq(df.anc$p, main="Adjusted for Ancestry")
+dev.copy(png,'../Figures/QQ-Anc.png')
+dev.off()
+
+## Under Adjusted Models ##
+op = par(no.readonly = TRUE)
+par(mfrow=c(1,2))
+qq(df.noadj$p, main="Unadjusted")
+qq(df.gender$p, main="Adjusted for Gender")
+par(op)
+dev.copy(png,'../Figures/QQ-Under.png')
+dev.off()
+
+## Over Adjusted Models ##
+qq(df.genanc$p, main="Adj. for Gender, Ancestry")
+dev.copy(png,'../Figures/QQ-GenAnc.png')
+dev.off()
+
+op = par(no.readonly = TRUE)
+par(mfrow=c(2,2))
+qq(df.pc13$p, main="Adj. for PCs 1-3")
+qq(df.pc15$p, main="Adj. for PCs 1-5")
+qq(df.genpc13$p, main="Adj. for Gender and PCs 1-3")
+qq(df.genpc15$p, main="Adj. for Gender and PCs 1-5")
+par(op)
+dev.copy(png,'../Figures/QQ-PCs.png')
+dev.off()
+
+qq(df.anc.fac$p, main="Adj. for Ancestry, No Assumed Inheritance Mode")
+dev.copy(png,'../Figures/QQ-Anc-Fac.png')
+dev.off()
+
