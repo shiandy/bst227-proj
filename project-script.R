@@ -13,6 +13,7 @@ library("irlba")
 library("foreach")
 library("doParallel")
 library("ggplot2")
+library(aod)
 
 #Read data; consider using the `readr` package to make this faster
 gdat <- data.matrix(fread("genotype.txt"))
@@ -213,19 +214,34 @@ df.genanc <- data.frame("chr"=legend[output.genanc[,"SNP_num"],"chr"],
                      "bp"=legend[output.genanc[,"SNP_num"],"position"],
                      "p"=output.genanc[,"pval"])
 
-## Ancestry, by factor ##
+## Ancestry+Gender, by factor ##
 cl <- makeCluster(4)
 registerDoParallel(cl)
 
 output.anc.fac <- foreach(j = 1:nSNPsRemaining, .combine = rbind) %dopar% {
   use <- ifelse(is.na(gdat2[,j]),FALSE,TRUE)
-  mod <- glm(pdat2$Y[use] ~ as.factor(gdat2[use, j]) + pdat2$ancestry[use],
-             family = binomial())
-  pval <- summary(mod)$coeff["gdat2[, j]", "Pr(>|z|)"]
-  beta <- coef(mod)["gdat2[, j]"]
-  ret <- c(j, beta, pval)
-  names(ret) <- c("SNP_num", "beta", "pval")
-  ret
+  numterms <- sum(c(sum(gdat2[use,j]==0),sum(gdat2[use,j]==1),
+                    sum(gdat2[use,j]==2))>0)
+  if(numterms >= 2) {
+    mod <- glm(pdat2$Y[use] ~ as.factor(gdat2[use, j]) + 
+                 pdat2$ancestry[use] + pdat2$gender[use],
+               family = binomial())
+    wald <- tryCatch(aod::wald.test(Sigma=vcov(mod),b=coef(mod),Terms=2:numterms),
+                     error=function(e) aod::wald.test(Sigma=1,
+                                                      b=0,
+                                                      Terms=1))
+    #wald <- try(aod::wald.test(Sigma=vcov(mod),b=coef(mod),Terms=2:numterms))
+    #if (inherits(wald, "try-error")) {
+    #  pval <- 1
+    #}
+    pval <- wald$result$chi2["P"]
+    ret <- c(j, pval)
+  }
+  else {
+    ret <- c(j,1)
+  }
+names(ret) <- c("SNP_num", "pval")
+ret
 }
 stopCluster(cl)
 df.anc.fac <- data.frame("chr"=legend[output.anc.fac[,"SNP_num"],"chr"],
